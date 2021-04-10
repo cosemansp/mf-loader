@@ -49,7 +49,3 @@ const init = (remote: string, moduleName: string, options) => {
 export default {
   init,
 };
-
-// (window as any).loader = {
-//   init,
-// };
