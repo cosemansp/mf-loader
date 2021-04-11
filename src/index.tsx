@@ -1,3 +1,5 @@
+import { loadScript } from './scriptLoader';
+
 interface Module {
   mount: (module: any, options: any) => void;
 }
@@ -8,44 +10,82 @@ interface Container {
 declare function __webpack_init_sharing__(scope: string): void;
 declare let __webpack_share_scopes__: any;
 
-const init = (remote: string, moduleName: string, options) => {
+const loadAndInitiateWebpackContainer = async (name: string, url: string) => {
+  // Initializes the share scope.
+  // This fills it with known provided modules from this build and all remotes
+  await __webpack_init_sharing__('default');
+  const container = (window[name] as any) as Container;
+  if (!container || !container.init) throw new Error(`Cannot load external remote: ${name} from ${url}`);
+
+  // Initialize the container, it may provide shared modules
+  await container.init(__webpack_share_scopes__.default);
+  return container;
+};
+
+const loadFromRemote = async (name: string, url: string, moduleName: string): Promise<Module> => {
+  const container = await loadAndInitiateWebpackContainer(name, url);
+  if (!container.get) throw new Error(`Cannot load external remote: ${name}`);
+
+  const factory = await container.get(moduleName);
+  const module = factory();
+  return module;
+};
+
+const mounts = [];
+
+const register = (remote: string, moduleName: string, options): void => {
   const { selector } = options || {};
-
-  if (!selector) {
-    throw Error('Selector required');
-  }
-
   const element = document.querySelector(selector);
-  if (!element) {
-    throw Error(`Element not found: ${selector}`);
-  }
-
-  const appParts = remote.split('@');
-  const appName = appParts[0];
-  const url = appParts[1];
-  if (!appName || !url) {
+  const remoteParts = remote.split('@');
+  const name = remoteParts[0];
+  const url = remoteParts[1];
+  if (!name || !url) {
     throw Error('Invalid remote');
   }
 
-  const remoteScript = document.createElement('script');
-  remoteScript.setAttribute('src', url);
-  document.head.appendChild(remoteScript);
+  mounts.push({
+    name,
+    url,
+    moduleName,
+    element,
+    selector,
+    options,
+  });
+};
 
-  remoteScript.addEventListener('load', async () => {
-    await __webpack_init_sharing__('default');
+const start = async () => {
+  // load all scripts
+  const promisesScripts = mounts.map((mount) => {
+    return loadScript(mount.url);
+  });
+  await Promise.all(promisesScripts);
 
-    const container = window[appName] as Container;
-    if (!container) {
-      throw Error(`Remote not found: ${appName}`);
+  // get all modules
+  const promisesModules = mounts.map((mount) => {
+    return loadFromRemote(mount.name, mount.url, mount.moduleName).then((module) => {
+      return {
+        module,
+        selector: mount.selector,
+        element: mount.element,
+        options: mount.options,
+      };
+    });
+  });
+  const moduleContexts = await Promise.all(promisesModules);
+
+  // mount modules
+  moduleContexts.forEach((context) => {
+    if (!context.element) {
+      console.error(`Missing or invalid selector: ${context.selector}`);
+    } else {
+      context.module.mount(context.element, context.options);
     }
-    await container.init(__webpack_share_scopes__.default);
-
-    const factoryFn = await container.get(moduleName);
-    const module = factoryFn();
-    module.mount(element, options);
   });
 };
 
 export default {
-  init,
+  register,
+  start,
+  loadFromRemote,
+  loadScript,
 };
