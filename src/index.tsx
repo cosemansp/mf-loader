@@ -10,22 +10,20 @@ interface Container {
 declare function __webpack_init_sharing__(scope: string): void;
 declare let __webpack_share_scopes__: any;
 
-const loadAndInitiateWebpackContainer = async (name: string, url: string) => {
+const loadAndInitiateWebpackContainer = async (name: string) => {
   // Initializes the share scope.
   // This fills it with known provided modules from this build and all remotes
   await __webpack_init_sharing__('default');
   const container = (window[name] as any) as Container;
-  if (!container || !container.init) throw new Error(`Cannot load external remote: ${name} from ${url}`);
+  if (!container || !container.init) throw new Error(`Cannot find external remote: ${name}`);
 
   // Initialize the container, it may provide shared modules
   await container.init(__webpack_share_scopes__.default);
   return container;
 };
 
-const loadFromRemote = async (name: string, url: string, moduleName: string): Promise<Module> => {
-  const container = await loadAndInitiateWebpackContainer(name, url);
-  if (!container.get) throw new Error(`Cannot load external remote: ${name}`);
-
+const getRemoteModule = async (name: string, moduleName: string): Promise<Module> => {
+  const container = await loadAndInitiateWebpackContainer(name);
   const factory = await container.get(moduleName);
   const module = factory();
   return module;
@@ -62,7 +60,7 @@ const start = async () => {
 
   // get all modules
   const promisesModules = mounts.map((mount) => {
-    return loadFromRemote(mount.name, mount.url, mount.moduleName).then((module) => {
+    return getRemoteModule(mount.name, mount.moduleName).then((module) => {
       return {
         module,
         selector: mount.selector,
@@ -86,6 +84,6 @@ const start = async () => {
 export default {
   register,
   start,
-  loadFromRemote,
+  getRemoteModule,
   loadScript,
 };
