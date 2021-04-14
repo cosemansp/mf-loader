@@ -1,17 +1,14 @@
 {
   "name": "@euricom/mf-loader",
-  "version": "0.4.3",
-  "main": "dist/mfLoader.js",
+  "version": "0.4.5",
+  "main": "mfLoader.js",
   "license": "MIT",
-  "files": [
-    "./dist/mfLoader.js",
-    "./dist/mfLoader.js.map"
-  ],
   "dependencies": {},
   "scripts": {
     "start:watch": "webpack serve --port 3005 --open",
     "build": "webpack --mode production",
-    "cleanup": "rimraf dist"
+    "cleanup": "rimraf dist",
+    "release": "yarn build && cp package.json ./dist && cp .npmignore ./dist && cd ./dist && yarn publish"
   },
   "devDependencies": {
     "@babel/core": "^7.8.6",
