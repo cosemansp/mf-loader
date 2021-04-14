@@ -1,8 +1,12 @@
 {
   "name": "@euricom/mf-loader",
-  "version": "0.4.1",
+  "version": "0.4.3",
   "main": "dist/mfLoader.js",
   "license": "MIT",
+  "files": [
+    "./dist/mfLoader.js",
+    "./dist/mfLoader.js.map"
+  ],
   "dependencies": {},
   "scripts": {
     "start:watch": "webpack serve --port 3005 --open",
