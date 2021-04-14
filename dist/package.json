@@ -1,6 +1,7 @@
 {
   "name": "@euricom/mf-loader",
-  "version": "0.4.7",
+  "version": "0.4.8",
+  "main": "mfLoader.js",
   "license": "MIT",
   "dependencies": {},
   "scripts": {
